@@ -1,0 +1,253 @@
+using System; 
+using System.IO;
+using System.IO.Compression;
+using System.Text.Json; 
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Xml;
+
+
+
+namespace ALISA
+{
+  class Program
+  {
+    class Person
+    {
+      public string Name { get; set; }
+      public int Age { get; set; }
+    }
+    
+    class User
+    {
+      public string Name { get; set; }
+      public int Age { get; set; }
+      public string Company { get; set; }
+    }
+
+    
+    static async Task Main(string[] args)
+    {
+      Console.WriteLine("Номер задания:");
+      int n = Convert.ToInt32(Console.ReadLine());
+      switch (n)
+      {
+        case 1:
+          DriveInfo[] drives = DriveInfo.GetDrives();
+          foreach (DriveInfo drive in drives)
+          {
+            Console.WriteLine($"Название: {drive.Name}");
+            Console.WriteLine($"Тип: {drive.DriveType}");
+            if (drive.IsReady)
+            {
+              Console.WriteLine($"Объем диска: {drive.TotalSize}");
+              Console.WriteLine($"Свободное пространство: {drive.TotalFreeSpace}");
+              Console.WriteLine($"Метка: {drive.VolumeLabel}");
+            }
+
+            Console.WriteLine();
+          }
+
+          break;
+
+        case 2:
+          string path = @"D:\Documents\alisa.txt";
+          // запись в файл
+          using (FileStream fstream = File.Create(path))
+          {
+            Console.WriteLine("Введите строку для записи в файл:");
+            string text = Console.ReadLine();
+            // преобразуем строку в байты
+            byte[] array = System.Text.Encoding.Default.GetBytes(text);
+
+            // запись массива байтов в файл
+            fstream.Write(array, 0, array.Length);
+            Console.WriteLine("Текст записан в файл");
+          }
+
+          // чтение из файла
+          using (FileStream fstream = File.OpenRead(path))
+          {
+            // преобразуе строку в байты
+            byte[] array = new byte[fstream.Length];
+            // считываем данные
+            fstream.Read(array, 0, array.Length);
+            // декодируем байты в строку
+            string File = System.Text.Encoding.Default.GetString(array);
+            Console.WriteLine($"Текст из файла: {File}");
+          }
+
+          // удаление файла
+          Console.WriteLine("Нажмите Enter для удаления");
+          Console.ReadLine();
+          FileInfo fileinfo = new FileInfo(path);
+          if (fileinfo.Exists)
+          {
+            fileinfo.Delete();
+          }
+          break;
+        
+          case 3:
+
+            using(FileStream fs = new FileStream("user.json", FileMode.OpenOrCreate))
+            {
+             Person tom = new Person() { Name = "Tom", Age = 35 };
+             await JsonSerializer.SerializeAsync<Person>(fs, tom);
+             Console.WriteLine("Data has been saved to file");
+            }
+            // чтениеданных
+          using(FileStream fs = new FileStream("user.json", FileMode.OpenOrCreate))
+          {
+            Person restoredPerson = await JsonSerializer.DeserializeAsync<Person>(fs);
+            Console.WriteLine($"Name: {restoredPerson.Name}  Age: {restoredPerson.Age}");
+          }
+          break;
+          
+          case 4:
+            List<User> users = new List<User>();
+            XmlDocument xDoc = new XmlDocument();
+            xDoc.Load("D://users.xml");
+            XmlElement xRoot = xDoc.DocumentElement;
+            foreach(XmlElement xnode in xRoot) 
+            {
+             User user = new User();
+             XmlNode attr = xnode.Attributes.GetNamedItem("name");
+             if(attr != null)
+              user.Name = attr.Value;
+ 
+             foreach(XmlNode childnode in xnode.ChildNodes)
+             {
+              if(childnode.Name == "company")
+                user.Company = childnode.InnerText;
+ 
+              if(childnode.Name == "age")
+                user.Age = Int32.Parse(childnode.InnerText);
+             }
+             users.Add(user);
+            }
+            foreach(User u in users)
+              Console.WriteLine($"{u.Name} ({u.Company}) - {u.Age}");
+            Console.Read();
+            Console.WriteLine("Изменить документ? - Enter");
+            Console.ReadLine();
+            
+            
+                 // создаем новый элемент user
+            XmlElement userElem = xDoc.CreateElement("user");
+                 // создаем атрибут name
+            XmlAttribute nameAttr = xDoc.CreateAttribute("name");
+                 // создаем элементы company и age
+            XmlElement companyElem = xDoc.CreateElement("company");
+            XmlElement ageElem = xDoc.CreateElement("age");
+                 // создаем текстовые значения для элементов и атрибута
+            XmlText nameText = xDoc.CreateTextNode("Mark Zuckerberg");
+            XmlText companyText = xDoc.CreateTextNode("Facebook");
+            XmlText ageText = xDoc.CreateTextNode("30");
+                //добавляем узлы
+            nameAttr.AppendChild(nameText);
+            companyElem.AppendChild(companyText);
+            ageElem.AppendChild(ageText);
+            userElem.Attributes.Append(nameAttr);
+            userElem.AppendChild(companyElem);
+            userElem.AppendChild(ageElem);
+            xRoot.AppendChild(userElem);
+            xDoc.Save("D://users.xml");
+            break;
+          
+        case 5:
+          /*string sourceFile = "D://test/book.pdf"; // исходный файл 
+          string compressedFile = "D://test/book.gz"; // сжатый файл 
+          string targetFile = "D://test/book_new.pdf"; // восстановленный файл 
+          // созданиесжатогофайла 
+          Compress(sourceFile, compressedFile); 
+              // чтениеизсжатогофайла 
+          Decompress(compressedFile, targetFile);
+
+          public static void Compress(string sourceFile, string compressedFile) 
+           { 
+               // поток для чтения исходного файла 
+             using(FileStream sourceStream = new FileStream(sourceFile, FileMode.OpenOrCreate)) 
+             { 
+               // поток для записи сжатого файла 
+             using(FileStream targetStream = File.Create(compressedFile)) 
+             { 
+               // поток архивации 
+             using(GZipStream compressionStream = new GZipStream(targetStream, CompressionMode.Compress)) 
+             { 
+              sourceStream.CopyTo(compressionStream); // копируем байты из одного потока в другой 
+              
+              Console.WriteLine("Сжатие файла {0} завершено. Исходный размер: {1} сжатый размер: {2}.", 
+                sourceFile, sourceStream.Length.ToString(), targetStream.Length.ToString()); 
+             } 
+             } 
+             } 
+           } 
+
+           public static void Decompress(string compressedFile, string targetFile) 
+           { 
+              // поток для чтения из сжатого файла 
+              using(FileStream sourceStream = new FileStream(compressedFile, FileMode.OpenOrCreate)) 
+              { 
+                  // поток для записи восстановленного файла 
+               using(FileStream targetStream = File.Create(targetFile)) 
+               { 
+                  // поток разархивации 
+                using(GZipStream decompressionStream = new GZipStream(sourceStream, CompressionMode.Decompress)) 
+                { 
+                 decompressionStream.CopyTo(targetStream); 
+                 Console.WriteLine("Восстановлен файл: {0}", targetFile); 
+                } 
+               } 
+              } 
+           }*/
+          
+          string sourceFile = "D://test/book.pdf"; 
+          string compressedFile = "D://test/book.gz"; 
+          string targetFile = "D://test/book_new.pdf"; 
+
+          Compress(sourceFile, compressedFile); 
+
+          Decompress(compressedFile, targetFile); 
+
+
+          static void Compress(string sourceFile, string compressedFile) 
+          { 
+
+            using (FileStream sourceStream = new FileStream(sourceFile, FileMode.OpenOrCreate)) 
+            { 
+
+              using (FileStream targetStream = File.Create(compressedFile)) 
+              { 
+
+                using (GZipStream compressionStream = new GZipStream(targetStream, CompressionMode.Compress)) 
+                { 
+                  sourceStream.CopyTo(compressionStream); 
+                  Console.WriteLine("Сжатие файла {0} завершено. Исходный размер: {1} сжатый размер: {2}.", 
+                    sourceFile, sourceStream.Length.ToString(), targetStream.Length.ToString()); 
+                } 
+              } 
+            } 
+          } 
+          static void Decompress(string compressedFile, string targetFile) 
+          { 
+
+            using (FileStream sourceStream = new FileStream(compressedFile, FileMode.OpenOrCreate)) 
+            { 
+
+              using (FileStream targetStream = File.Create(targetFile)) 
+              { 
+
+                using (GZipStream decompressionStream = new GZipStream(sourceStream, CompressionMode.Decompress)) 
+                { 
+                  decompressionStream.CopyTo(targetStream); 
+                  Console.WriteLine("Восстановлен файл: {0}", targetFile); 
+                } 
+              } 
+            } 
+          }
+          break;
+        }
+      }
+    }
+  }
+
